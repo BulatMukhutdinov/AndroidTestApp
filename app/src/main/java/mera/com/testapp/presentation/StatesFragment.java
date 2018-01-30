@@ -25,36 +25,28 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import java.lang.ref.WeakReference;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
 
 import mera.com.testapp.R;
 import mera.com.testapp.data.State;
 import mera.com.testapp.databinding.FragmentListBinding;
-import mera.com.testapp.domain.StatesRetreiverService;
+import mera.com.testapp.domain.StatesRetrieverService;
 import mera.com.testapp.domain.db.DatabaseHelper;
 
 public class StatesFragment extends Fragment implements SwipeRefreshLayout.OnRefreshListener {
     private static final String TAG = StatesFragment.class.getSimpleName();
-    private FragmentListBinding binding;
-
-    private Context context;
     private static final String[] COUNTRIES = new String[]{"All", "Germany", "United States"};
 
+    private FragmentListBinding binding;
     private StatesAdapter adapter;
-
-    private StatesRetreiverService service;
+    private StatesRetrieverService service;
     private boolean isServiceBound;
-
     private StatesReceiver statesReceiver = new StatesReceiver();
-
     private String countryFilter;
-
     private int chosenFilterPosition;
-
-    public StatesFragment(Context context) {
-        this.context = context;
-    }
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -70,7 +62,7 @@ public class StatesFragment extends Fragment implements SwipeRefreshLayout.OnRef
 
         binding.listRefresh.setOnRefreshListener(this);
 
-        LinearLayoutManager layoutManager = new LinearLayoutManager(context);
+        LinearLayoutManager layoutManager = new LinearLayoutManager(getContext());
         binding.list.setLayoutManager(layoutManager);
 
         adapter = new StatesAdapter();
@@ -82,15 +74,19 @@ public class StatesFragment extends Fragment implements SwipeRefreshLayout.OnRef
     @Override
     public void onStart() {
         super.onStart();
-        context.registerReceiver(statesReceiver, new IntentFilter(StatesRetreiverService.STATES_UPDATED_ACTION));
-        context.bindService(StatesRetreiverService.createServiceIntent(context), connection, Context.BIND_AUTO_CREATE);
+        if (getContext() != null) {
+            getContext().registerReceiver(statesReceiver, new IntentFilter(StatesRetrieverService.STATES_UPDATED_ACTION));
+        }
+        getContext().bindService(StatesRetrieverService.createServiceIntent(getContext()), connection, Context.BIND_AUTO_CREATE);
     }
 
     @Override
     public void onStop() {
         super.onStop();
-        context.unregisterReceiver(statesReceiver);
-        context.unbindService(connection);
+        if (getContext() != null) {
+            getContext().unregisterReceiver(statesReceiver);
+        }
+        getContext().unbindService(connection);
         isServiceBound = false;
     }
 
@@ -108,18 +104,17 @@ public class StatesFragment extends Fragment implements SwipeRefreshLayout.OnRef
         return super.onOptionsItemSelected(item);
     }
 
-
     @Override
     public void onRefresh() {
         if (isServiceAvailable()) {
             binding.listRefresh.setRefreshing(true);
-            service.retreiveFromApi(context);
+            service.retrieveFromAdi(getContext());
         }
     }
 
     private void showFilterDialog() {
         if (getActivity() == null) {
-            Toast.makeText(context, getString(R.string.general_error), Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), getString(R.string.general_error), Toast.LENGTH_SHORT).show();
         } else {
             AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
             builder.setSingleChoiceItems(COUNTRIES, chosenFilterPosition, (dialog, which) -> {
@@ -130,7 +125,7 @@ public class StatesFragment extends Fragment implements SwipeRefreshLayout.OnRef
                 } else {
                     countryFilter = COUNTRIES[which];
                 }
-                getActivity().sendBroadcast(new Intent(StatesRetreiverService.STATES_UPDATED_ACTION));
+                getActivity().sendBroadcast(new Intent(StatesRetrieverService.STATES_UPDATED_ACTION));
                 dialog.dismiss();
             });
             builder.create().show();
@@ -145,7 +140,7 @@ public class StatesFragment extends Fragment implements SwipeRefreshLayout.OnRef
         @Override
         public void onReceive(Context context, Intent intent) {
             Log.d(TAG, "StatesReceiver: onReceive action: " + intent.getAction());
-            if (Objects.equals(intent.getAction(), StatesRetreiverService.STATES_UPDATED_ACTION)) {
+            if (Objects.equals(intent.getAction(), StatesRetrieverService.STATES_UPDATED_ACTION)) {
                 updateStateListAsync();
             }
         }
@@ -155,7 +150,7 @@ public class StatesFragment extends Fragment implements SwipeRefreshLayout.OnRef
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             isServiceBound = true;
-            StatesRetreiverService.LocalBinder localBinder = (StatesRetreiverService.LocalBinder) iBinder;
+            StatesRetrieverService.LocalBinder localBinder = (StatesRetrieverService.LocalBinder) iBinder;
             service = localBinder.getService();
             updateStateListAsync();
         }
@@ -169,26 +164,46 @@ public class StatesFragment extends Fragment implements SwipeRefreshLayout.OnRef
 
     private void updateStateListAsync() {
         binding.listRefresh.setRefreshing(true);
-        new AsyncTask<Void, Void, Set<State>>() {
-            @Override
-            protected Set<State> doInBackground(Void... voids) {
-                return service.retreiveLocal(context, countryFilter, DatabaseHelper.SortType.NONE);
-            }
+        ReceiveStatesAsyncTask receiveStatesAsyncTask = new ReceiveStatesAsyncTask(this);
+        receiveStatesAsyncTask.execute();
+    }
 
-            @Override
-            protected void onPostExecute(Set<State> localStates) {
-                binding.listRefresh.setRefreshing(false);
-                adapter.setData(localStates);
-                MainActivity activity = (MainActivity) getActivity();
-                if (activity != null) {
-                    activity.updateActionBar(localStates.size());
-                }
-                if (localStates != null && !localStates.isEmpty()) {
-                    binding.emptyWarn.setVisibility(View.GONE);
-                } else {
-                    binding.emptyWarn.setVisibility(View.VISIBLE);
-                }
+    static class ReceiveStatesAsyncTask extends AsyncTask<Void, Void, Set<State>> {
+        // Weak references will still allow the Fragment to be garbage-collected
+        private final WeakReference<StatesFragment> weakActivity;
+
+        ReceiveStatesAsyncTask(StatesFragment fragment) {
+            this.weakActivity = new WeakReference<>(fragment);
+        }
+
+        @Override
+        protected Set<State> doInBackground(Void... voids) {
+            StatesFragment statesFragment = weakActivity.get();
+            if (statesFragment == null) {
+                return Collections.emptySet();
             }
-        }.execute();
+            return statesFragment.service.retrieveLocal(statesFragment.getContext(),
+                    statesFragment.countryFilter, DatabaseHelper.SortType.NONE);
+        }
+
+        @Override
+        protected void onPostExecute(Set<State> localStates) {
+            StatesFragment statesFragment = weakActivity.get();
+
+            if (statesFragment == null) {
+                return;
+            }
+            statesFragment.binding.listRefresh.setRefreshing(false);
+            statesFragment.adapter.setData(localStates);
+            MainActivity activity = (MainActivity) statesFragment.getActivity();
+            if (activity != null) {
+                activity.updateActionBar(localStates.size());
+            }
+            if (localStates != null && !localStates.isEmpty()) {
+                statesFragment.binding.emptyWarn.setVisibility(View.GONE);
+            } else {
+                statesFragment.binding.emptyWarn.setVisibility(View.VISIBLE);
+            }
+        }
     }
 }

@@ -20,7 +20,7 @@ public class MainActivity extends AppCompatActivity {
     private void showFragment() {
         FragmentManager fm = getSupportFragmentManager();
         FragmentTransaction ft = fm.beginTransaction();
-        ft.add(R.id.container, new StatesFragment(this));
+        ft.add(R.id.container, new StatesFragment());
         ft.commitAllowingStateLoss();
     }
 

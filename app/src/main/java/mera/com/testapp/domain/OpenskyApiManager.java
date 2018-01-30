@@ -5,8 +5,6 @@ import android.support.annotation.NonNull;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import mera.com.testapp.R;
-import mera.com.testapp.TestApplication;
 import mera.com.testapp.data.net.OpenskyApi;
 import okhttp3.OkHttpClient;
 import retrofit2.Call;
@@ -14,22 +12,23 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-public class OpenskyApiManager {
+class OpenskyApiManager {
+    private static final String OPENSKY_URL = "https://opensky-network.org/api/";
     private OpenskyApi mOpenskyApi;
 
-    public OpenskyApiManager() {
+    OpenskyApiManager() {
         mOpenskyApi = getRetrofit().create(OpenskyApi.class);
     }
 
     @NonNull
-    public OpenskyApi getWebApiInterface() {
+    OpenskyApi getWebApiInterface() {
         return mOpenskyApi;
     }
 
     @NonNull
     private static Retrofit getRetrofit() {
         return new Retrofit.Builder()
-                .baseUrl(TestApplication.instance.getString(R.string.api_url))
+                .baseUrl(OPENSKY_URL)
                 .addConverterFactory(GsonConverterFactory.create())
                 .client(getClient())
                 .build();
@@ -42,7 +41,7 @@ public class OpenskyApiManager {
                 .readTimeout(60, TimeUnit.SECONDS).build();
     }
 
-    public <T> T execute(Call<T> request) throws IOException {
+    <T> T execute(Call<T> request) throws IOException {
         final Response<T> response = request.execute();
         return response.body();
     }

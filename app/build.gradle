@@ -15,10 +15,6 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            resValue "string", "api_url", "https://opensky-network.org/api/"
-        }
-        debug{
-            resValue "string", "api_url", "https://opensky-network.org/api/"
         }
     }
     dataBinding {

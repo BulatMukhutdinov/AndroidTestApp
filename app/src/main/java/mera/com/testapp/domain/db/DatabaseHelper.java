@@ -17,21 +17,9 @@ import static mera.com.testapp.domain.db.StateTable.KEY_STATE_COUNTRY;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
-    private static DatabaseHelper instance;
+    private static final int STATE_SIGNIFICANT_COLUMNS_AMOUNT = 4;
 
-    private static Context context;
-
-    private static final int STATE_SIGNIFICATN_COLUMNS_AMOUNT = 4;
-
-    public static DatabaseHelper getInstance(Context context) {
-        DatabaseHelper.context = context;
-        if (instance == null) {
-            instance = new DatabaseHelper();
-        }
-        return instance;
-    }
-
-    public DatabaseHelper() {
+    public DatabaseHelper(Context context) {
         super(context, "database.db", null, 1);
     }
 
@@ -45,16 +33,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         // table has read only fields
     }
 
-    public boolean insert(List<State> states) {
+    public void insert(List<State> states) {
         if (states == null || states.isEmpty()) {
-            return false;
+            return;
         }
-
-        boolean isAllInserted = true;
-
         SQLiteDatabase db = getWritableDatabase();
         for (State state : states) {
-            ContentValues cv = new ContentValues(STATE_SIGNIFICATN_COLUMNS_AMOUNT);
+            ContentValues cv = new ContentValues(STATE_SIGNIFICANT_COLUMNS_AMOUNT);
             cv.put(StateTable.KEY_STATE_ICAO, state.getIcao24());
             cv.put(StateTable.KEY_STATE_CALLSIGN, state.getCallsign());
             cv.put(KEY_STATE_COUNTRY, state.getOriginCountry());
@@ -62,11 +47,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
             long rowId = db.insert(StateTable.STATE_TABLE, null, cv);
             if (rowId == -1) {
-                isAllInserted = false;
                 break;
             }
         }
-        return isAllInserted;
     }
 
     public Set<State> query(String countryFilter, SortType type) {

@@ -14,14 +14,14 @@ import mera.com.testapp.data.State;
 
 class StatesAdapter extends RecyclerView.Adapter<StatesAdapter.StateCard> {
 
-    private State[] dataset;
+    private State[] dataSet;
 
     StatesAdapter() {
-        dataset = new State[0];
+        dataSet = new State[0];
     }
 
-    public void setData(Set<State> dataset) {
-        this.dataset = dataset.toArray(new State[dataset.size()]);
+    public void setData(Set<State> dataSet) {
+        this.dataSet = dataSet.toArray(new State[dataSet.size()]);
         notifyDataSetChanged();
     }
 
@@ -40,10 +40,10 @@ class StatesAdapter extends RecyclerView.Adapter<StatesAdapter.StateCard> {
 
     @Override
     public void onBindViewHolder(StateCard holder, int position) {
-        holder.icao24.setText(dataset[position].getIcao24());
-        holder.callsign.setText(dataset[position].getCallsign());
-        holder.originCountry.setText(dataset[position].getOriginCountry());
-        holder.velocity.setText(formatVelocity(dataset[position].getVelocity()));
+        holder.icao24.setText(dataSet[position].getIcao24());
+        holder.callsign.setText(dataSet[position].getCallsign());
+        holder.originCountry.setText(dataSet[position].getOriginCountry());
+        holder.velocity.setText(formatVelocity(dataSet[position].getVelocity()));
     }
 
     private String formatVelocity(float velocity) {
@@ -56,7 +56,7 @@ class StatesAdapter extends RecyclerView.Adapter<StatesAdapter.StateCard> {
 
     @Override
     public int getItemCount() {
-        return dataset.length;
+        return dataSet.length;
     }
 
     static class StateCard extends RecyclerView.ViewHolder {

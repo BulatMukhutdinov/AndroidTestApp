@@ -12,26 +12,28 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import mera.com.testapp.domain.db.DatabaseHelper;
 import mera.com.testapp.data.State;
 import mera.com.testapp.data.StatesResponse;
+import mera.com.testapp.domain.db.DatabaseHelper;
 import retrofit2.Call;
 
-public class StatesRetreiverService extends Service {
+public class StatesRetrieverService extends Service {
     public static final String STATES_UPDATED_ACTION = "states_updated";
 
-    private static final String TAG = StatesRetreiverService.class.getSimpleName();
+    private static final String TAG = StatesRetrieverService.class.getSimpleName();
 
     private LocalBinder binder = new LocalBinder();
 
+    private DatabaseHelper databaseHelper;
+
     public class LocalBinder extends Binder {
-        public StatesRetreiverService getService() {
-            return StatesRetreiverService.this;
+        public StatesRetrieverService getService() {
+            return StatesRetrieverService.this;
         }
     }
 
     public static Intent createServiceIntent(Context context) {
-        return new Intent(context, StatesRetreiverService.class);
+        return new Intent(context, StatesRetrieverService.class);
     }
 
     @Nullable
@@ -40,15 +42,20 @@ public class StatesRetreiverService extends Service {
         return binder;
     }
 
-    public Set<State> retreiveLocal(Context context, String countryFilter, DatabaseHelper.SortType sortType) {
-        return DatabaseHelper.getInstance(context).query(countryFilter, sortType);
+    public Set<State> retrieveLocal(Context context, String countryFilter, DatabaseHelper.SortType sortType) {
+        if (databaseHelper == null) {
+            databaseHelper = new DatabaseHelper(context);
+        }
+        return databaseHelper.query(countryFilter, sortType);
     }
 
-    public void retreiveFromApi(final Context context) {
+    public void retrieveFromAdi(final Context context) {
         new Thread(() -> {
-            DatabaseHelper helper = DatabaseHelper.getInstance(context);
-            helper.delete();
-            helper.insert(getStates());
+            if (databaseHelper == null) {
+                databaseHelper = new DatabaseHelper(context);
+            }
+            databaseHelper.delete();
+            databaseHelper.insert(getStates());
             sendBroadcast(new Intent(STATES_UPDATED_ACTION));
         }).start();
     }

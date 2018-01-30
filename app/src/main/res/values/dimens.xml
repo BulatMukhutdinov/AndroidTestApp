@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="marign_half">4dp</dimen>
+    <dimen name="marign">8dp</dimen>
+    <dimen name="marign2x">16dp</dimen>
+
+    <dimen name="card_corner_radius">10dp</dimen>
+    <dimen name="card_elevation">5dp</dimen>
+    <dimen name="card_content_padding">15dp</dimen>
+</resources>
